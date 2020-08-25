@@ -39,16 +39,6 @@ Sometimes it may be required to implement a simple interface, but usually it is 
 transforming or intercepting function. Features are installed into the application using a unified *interception* mechanism
 which allows building arbitrary pipelines. 
 
-#### Selected Features
-
-###### Locations
-
-a aa
-
-###### Content negotiation
-
-b bb
-
 Ktor Applications can be hosted in any servlet container with Servlet 3.0+ API support such as Tomcat, or 
 standalone using Netty or Jetty. Support for other hosts can be added through the unified hosting API.
 
