@@ -39,11 +39,13 @@ Sometimes it may be required to implement a simple interface, but usually it is 
 transforming or intercepting function. Features are installed into the application using a unified *interception* mechanism
 which allows building arbitrary pipelines. 
 
-###### a
+#### Selected Features
+
+###### Locations
 
 a aa
 
-###### b
+###### Content negotiation
 
 b bb
 
