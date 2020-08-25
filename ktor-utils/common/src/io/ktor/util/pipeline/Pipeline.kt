@@ -11,23 +11,27 @@ import kotlin.jvm.*
 /**
  * Represents an execution pipeline for asynchronous extensible computations
  */
-open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase) {
+public open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase) {
     init {
         preventFreeze()
     }
+
     /**
      * Provides common place to store pipeline attributes
      */
-    val attributes = Attributes(concurrent = true)
+    public val attributes: Attributes = Attributes(concurrent = true)
 
-    constructor(phase: PipelinePhase, interceptors: List<PipelineInterceptor<TSubject, TContext>>) : this(phase) {
+    public constructor(
+        phase: PipelinePhase,
+        interceptors: List<PipelineInterceptor<TSubject, TContext>>
+    ) : this(phase) {
         interceptors.forEach { intercept(phase, it) }
     }
 
     /**
      * Executes this pipeline in the given [context] and with the given [subject]
      */
-    suspend fun execute(context: TContext, subject: TSubject): TSubject =
+    public suspend fun execute(context: TContext, subject: TSubject): TSubject =
         createContext(context, subject).execute(subject)
 
     @Suppress("DEPRECATION")
@@ -131,7 +135,7 @@ open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase
 //    }
 
     // array of phases or phase contents
-    private val phasesRaw: ArrayList<Any> = phases.mapTo(ArrayList<Any>(phases.size + 1)) {
+    private val phasesRaw: ArrayList<Any> = phases.mapTo(ArrayList(phases.size + 1)) {
         it
     }
 
@@ -188,7 +192,7 @@ open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase
     /**
      * Phases of this pipeline
      */
-    val items: List<PipelinePhase>
+    public val items: List<PipelinePhase>
         get() = phasesRaw.map {
             it as? PipelinePhase ?: (it as? PhaseContent<*, *>)?.phase!!
         }
@@ -196,7 +200,7 @@ open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase
     /**
      * Adds [phase] to the end of this pipeline
      */
-    fun addPhase(phase: PipelinePhase) {
+    public fun addPhase(phase: PipelinePhase) {
         if (hasPhase(phase)) return
         phasesRaw.add(phase)
     }
@@ -204,7 +208,7 @@ open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase
     /**
      * Inserts [phase] after the [reference] phase
      */
-    fun insertPhaseAfter(reference: PipelinePhase, phase: PipelinePhase) {
+    public fun insertPhaseAfter(reference: PipelinePhase, phase: PipelinePhase) {
         if (hasPhase(phase)) return
         val index = findPhaseIndex(reference)
         if (index == -1)
@@ -215,7 +219,7 @@ open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase
     /**
      * Inserts [phase] before the [reference] phase
      */
-    fun insertPhaseBefore(reference: PipelinePhase, phase: PipelinePhase) {
+    public fun insertPhaseBefore(reference: PipelinePhase, phase: PipelinePhase) {
         if (hasPhase(phase)) return
         val index = findPhaseIndex(reference)
         if (index == -1)
@@ -227,7 +231,8 @@ open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase
      * @return `true` if there are no interceptors installed regardless number of phases
      */
     @InternalAPI
-    val isEmpty: Boolean get() = interceptorsQuantity == 0
+    public val isEmpty: Boolean
+        get() = interceptorsQuantity == 0
 
     /**
      * For tests only
@@ -273,7 +278,7 @@ open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase
     /**
      * Adds [block] to the [phase] of this pipeline
      */
-    fun intercept(phase: PipelinePhase, block: PipelineInterceptor<TSubject, TContext>) {
+    public fun intercept(phase: PipelinePhase, block: PipelineInterceptor<TSubject, TContext>) {
         val phaseContent = findPhase(phase)
             ?: throw InvalidPhaseException("Phase $phase was not registered for this pipeline")
 
@@ -292,13 +297,13 @@ open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase
     /**
      * Invoked after an interceptor has been installed
      */
-    open fun afterIntercepted() {
+    public open fun afterIntercepted() {
     }
 
     /**
      * Merges another pipeline into this pipeline, maintaining relative phases order
      */
-    fun merge(from: Pipeline<TSubject, TContext>) {
+    public fun merge(from: Pipeline<TSubject, TContext>) {
         if (fastPathMerge(from)) {
             return
         }
@@ -457,18 +462,21 @@ open class Pipeline<TSubject : Any, TContext : Any>(vararg phases: PipelinePhase
  * Executes this pipeline
  */
 @Suppress("NOTHING_TO_INLINE")
-suspend inline fun <TContext : Any> Pipeline<Unit, TContext>.execute(context: TContext): Unit = execute(context, Unit)
+public suspend inline fun <TContext : Any> Pipeline<Unit, TContext>.execute(
+    context: TContext
+): Unit = execute(context, Unit)
 
 /**
  * Intercepts an untyped pipeline when the subject is of the given type
  */
-inline fun <reified TSubject : Any, TContext : Any> Pipeline<*, TContext>.intercept(
+public inline fun <reified TSubject : Any, TContext : Any> Pipeline<*, TContext>.intercept(
     phase: PipelinePhase,
     noinline block: suspend PipelineContext<TSubject, TContext>.(TSubject) -> Unit
 ) {
 
     intercept(phase) interceptor@{ subject ->
-        subject as? TSubject ?: return@interceptor
+        if (subject !is TSubject) return@interceptor
+
         @Suppress("UNCHECKED_CAST")
         val reinterpret = this as? PipelineContext<TSubject, TContext>
         reinterpret?.block(subject)
@@ -478,4 +486,4 @@ inline fun <reified TSubject : Any, TContext : Any> Pipeline<*, TContext>.interc
 /**
  * Represents an interceptor type which is a suspend extension function for context
  */
-typealias PipelineInterceptor<TSubject, TContext> = suspend PipelineContext<TSubject, TContext>.(TSubject) -> Unit
+public typealias PipelineInterceptor<TSubject, TContext> = suspend PipelineContext<TSubject, TContext>.(TSubject) -> Unit
