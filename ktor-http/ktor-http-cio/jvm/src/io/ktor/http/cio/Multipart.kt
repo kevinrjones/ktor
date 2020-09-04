@@ -562,6 +562,9 @@ fun parseBoundary(contentType: CharSequence): ByteBuffer {
  */
 internal suspend fun ByteReadChannel.skipDelimiterOrEof(delimiter: ByteBuffer): Boolean {
     require(delimiter.hasRemaining())
+    require(delimiter.remaining() <= DEFAULT_BUFFER_SIZE) {
+        "Delimiter of ${delimiter.remaining()} bytes is too long: at most $DEFAULT_BUFFER_SIZE bytes could be checked"
+    }
 
     var found = false
 

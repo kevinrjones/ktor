@@ -6,6 +6,7 @@ package io.ktor.tests.http.cio
 
 import io.ktor.http.cio.*
 import io.ktor.utils.io.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.test.*
 import java.nio.*
 import kotlin.test.*
@@ -80,5 +81,68 @@ class TrySkipDelimiterTest {
         assertEquals(7, ch.readByte())
         assertEquals(8, ch.readByte())
         assertTrue(ch.isClosedForRead)
+    }
+
+    @Test
+    fun testTimeSplit(): Unit = runBlockingTest {
+        val writer = launch(CoroutineName("writer"), start = CoroutineStart.LAZY) {
+            ch.writeByte(2)
+            ch.close()
+        }
+
+        ch.writeByte(1)
+        ch.flush()
+        writer.start()
+
+        val delimiter = ByteBuffer.wrap(byteArrayOf(1, 2))
+
+        assertTrue(ch.skipDelimiterOrEof(delimiter))
+
+        assertTrue(ch.isClosedForRead)
+    }
+
+    @Test
+    fun testTimeSplitNonClosed(): Unit = runBlockingTest {
+        val writer = launch(CoroutineName("writer"), start = CoroutineStart.LAZY) {
+            ch.writeByte(2)
+            ch.flush()
+        }
+
+        ch.writeByte(1)
+        ch.flush()
+        writer.start()
+
+        val delimiter = ByteBuffer.wrap(byteArrayOf(1, 2))
+
+        assertTrue(ch.skipDelimiterOrEof(delimiter))
+        assertFalse(ch.isClosedForRead)
+        ch.cancel()
+    }
+
+    @Test
+    fun testTimeSplitWrongBytes(): Unit = runBlockingTest {
+        val writer = launch(CoroutineName("writer"), start = CoroutineStart.LAZY) {
+            ch.writeByte(33)
+            ch.flush()
+        }
+
+        ch.writeByte(1)
+        ch.flush()
+        writer.start()
+
+        val delimiter = ByteBuffer.wrap(byteArrayOf(1, 2))
+
+        assertFails {
+            ch.skipDelimiterOrEof(delimiter)
+        }
+
+        assertEquals(2, ch.availableForRead)
+    }
+
+    @Test
+    fun testSkipTooLongDelimiter(): Unit = runBlockingTest {
+        assertFails {
+            ch.skipDelimiterOrEof(ByteBuffer.allocate(DEFAULT_BUFFER_SIZE * 2))
+        }
     }
 }
